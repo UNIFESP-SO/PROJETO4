@@ -96,8 +96,6 @@ void cria_fila(fila_t *f) {
 }
 
 void cria_fila_memoria(fila_memoria *f) {
-    no_m *no = (no_m *)calloc(1, sizeof(no_m));
-	if (!no) return;
 	no = cria_no_memoria_vazio(0, TAM_MEMORIA);
 
 	f->inicio = no;
@@ -190,8 +188,9 @@ int insere_fila_memo(fila_memoria *f, processo_t proc){
 	}
 	if(f->inicio->status == 'H'){ // slot vazio
             if(f->inicio->tamanho >= no->tamanho){
-            // inserir no aqui
-            cria_no_memoria_vazio()
+                // inserir no aqui
+                no_m *no_vazio;
+                no_vazio = cria_no_memoria_vazio(f->inicio->init + , )
 		f->inicio = no;
 		f->fim = no;
 		f->inicio->ant = NULL;
