@@ -82,7 +82,7 @@ struct fila_memoria{
 	no_m *inicio;
 	no_m *fim;
 	int tamanho;
-	int free_slots;
+	int count;
 };
 typedef struct fila_memoria fila_memoria;
 
@@ -95,12 +95,14 @@ void cria_fila(fila_t *f) {
 	f->qtd_proc = 0;
 }
 
-void cria_fila_memoria(fila_memoria *f) {
+int cria_fila_memoria(fila_memoria *f) {
+	no_m *no = (no_m *)calloc(1, sizeof(no_m));
+	if (!no) return F;
 	no = cria_no_memoria_vazio(0, TAM_MEMORIA);
 
 	f->inicio = no;
 	f->fim = no;
-	f->free_slots = 1;
+	f->count = 0;
 	f->tamanho = TAM_MEMORIA;
 }
 
@@ -180,49 +182,35 @@ int insere_fila_prio(fila_t *f, processo_t proc){
 }
 
 // insercao memoria
-int insere_fila_memo(fila_memoria *f, processo_t proc){
-	no_m *no = cria_no_memoria(proc);
-	if (!no) return F;
+int insere_fila_memo(fila_memoria *f, no_m *no){
+
 	if (f->inicio == NULL) {    //fila vazia
             cria_fila_memoria(f);
 	}
-	if(f->inicio->status == 'H'){ // slot vazio
-            if(f->inicio->tamanho >= no->tamanho){
-                // inserir no aqui
-                no_m *no_vazio;
-                no_vazio = cria_no_memoria_vazio(f->inicio->init + , )
-		f->inicio = no;
-		f->fim = no;
-		f->inicio->ant = NULL;
 
-		f->inicio->init = 0;
-		//f->inicio->prox
-		return V;
-	}
-	if (no->proc.prio > f->inicio->proc.prio) {
-		no->prox = f->inicio;
-		no->ant = NULL;
-		f->inicio = no;
-		return V;
-	}
-	if (no->proc.prio <= f->fim->proc.prio) {
-		f->fim->prox = no;
-		no->ant = f->fim;
-		f->fim = no;
-		return V;
-	}
-
-	no_m *atual, *antx;
+	no_m *atual;
 	atual = f->inicio;
-	antx = NULL;
-	while(no->proc.prio <= atual->proc.prio) {
-		antx = atual;
-		atual = atual->prox;
-	}
-	antx->prox = no;
-	no->prox = atual;
-	no->ant = antx;
-	return V;
+
+	while(atual->prox != NULL && atual->status == 'P' || (atual->status == 'H' && atual->tamanho < no->tamanho) )
+        atual = atual->prox;
+
+    if(atual == f->fim){
+        // MATAR PROCESSO
+        retira_processo_aleatorio(f);
+        insere_fila_memo(f, no);
+    }
+    if(atual->status == 'H' && atual->tamanho >= no->tamanho){  // Se processo cabe nesse slot, insira
+        // inserir no aqui
+        atual->init += no->tamanho;
+        atual->tamanho -= no->tamanho;
+        atual->ant = no;
+        f->count += 1;
+        no->prox = f->inicio;
+        no->init = f->inicio->init;
+
+        atual = no;
+        return V;
+    }
 }
 
 int fila_vazia(fila_t *f) {
@@ -240,6 +228,76 @@ int retira_fila(fila_t *f, processo_t *proc) {
 	else f->inicio->ant = NULL;
 	free(no);
 	return V;
+}
+
+int retira_processo_aleatorio(fila_memoria *f){
+    int p = (rand()% (f->count) + 1);
+    int i = 0;
+    no_m *atual;
+    atual = f->inicio;
+    while(i <= p ){
+        if(atual->prox->status == 'P'){
+            i++;
+            atual = atual->prox;
+        }
+        else
+            atual = atual->prox;
+    }
+    return remove_no(atual);
+}
+
+int remove_no(no_m *no){
+    if(no->ant == NULL){
+        if(no->prox == NULL){
+            no = cria_no_memoria_vazio(no->init, no->tamanho);
+        }
+        else if(no->prox->status == 'P'){
+            no->status = 'H';
+        }
+        else if(no->prox->status == 'H'){
+            no->prox->tamanho += no->tamanho;
+            no->prox->ant = NULL;
+
+            free(no);
+        }
+    }
+    else if(no->prox == NULL){
+        if(no->ant == NULL){
+            no = cria_no_memoria_vazio(no->init, no->tamanho);
+        }
+        else if(no->ant->status == 'P')
+            no->status = 'H';
+        else if(no->ant->status == 'H'){
+            no->ant->tamanho += no->tamanho;
+            no->ant->prox = NULL;
+
+            free(no);
+        }
+    }
+    else{
+        if(no->prox->status == 'H'){
+            if(no->ant->status == 'H'){
+                no->ant->tamanho += no->tamanho + no->prox->tamanho;
+                no->ant->prox = no->prox->prox;
+                no->prox->prox->ant = no->ant;
+
+                free(no);
+                free(no->prox);
+            }
+            else if(no->ant->status == 'P'){
+                no->tamanho += no->prox->tamanho;
+                no->prox = no->prox->prox;
+                no->prox->prox->ant = no;
+                no->status = 'H';
+                free(no->prox);
+            }
+        }
+        if(no->ant->status == 'H'){
+            if(no->prox->status == 'P'){
+
+            }
+        }
+    }
 }
 
 void imprime_processo(processo_t proc) {
