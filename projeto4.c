@@ -213,7 +213,7 @@ int insere_fila_memo(fila_memoria *f, no_m *no){
     }
 }
 
-int fila_vazia(fila_t *f) {
+int fila_vazia(fila_memoria *f) {
 	if (f->inicio == NULL) return V;
 	return F;
 }
@@ -292,10 +292,18 @@ int remove_no(no_m *no){
                 free(no->prox);
             }
         }
+        else
         if(no->ant->status == 'H'){
             if(no->prox->status == 'P'){
+                no->ant->tamanho += no->tamanho;
+                no->ant->prox = no->prox;
+                no->prox->ant = no->ant;
 
+                free(no);
             }
+        }
+        else{
+            no->status = 'H';
         }
     }
 }
@@ -319,6 +327,22 @@ void imprime_processo(processo_t proc) {
         	proc.total_io,
 		proc.total_tempo_ret,
 		proc.tingresso );
+}
+
+void imprime_fila_memo(fila_memoria *f){
+    int no_id = 0;
+    no_m *atual;
+    atual = f->inicio;
+    if(atual == NULL){
+        printf("Fila Vazia\n");
+        return ;
+    }
+    do{
+        printf("[ %c | init-%d | tam-%d ] --> ", atual->status, atual->init, atual->tamanho);
+        no_id++;
+    }
+    while(atual->prox != NULL);
+
 }
 
 // roleta ... para gerar um evento, dada uma probabilidade x.
@@ -371,7 +395,7 @@ void executa_processo(processo_t *proc) {
 	imprime_processo(*proc);
 }
 
-void escalonador(fila_t *f) {
+void escalonador(fila_memoria *f) {
 	processo_t proc;
 	while(!fila_vazia(f)) {
 		bzero(&proc, sizeof(processo_t));
@@ -424,16 +448,16 @@ processo_t cria_processo(unsigned short pid){
 	processo_t proc;
 	proc.pid = pid;
 	proc.prio = rand()%5;
-        proc.quantum = get_quantum(proc.prio);
+    proc.quantum = get_quantum(proc.prio);
 	proc.ttotal_exec = rand()%10000;
-        proc.estado = PRONTO;
-        proc.cpu_bound = ((float)(rand()%101))/100.0;
+    proc.estado = PRONTO;
+    proc.cpu_bound = ((float)(rand()%101))/100.0;
 	proc.io_bound = 1 - proc.cpu_bound;
 	proc.texec = 0; // recebe tempo de execucao na cpu
-        proc.total_preemp = 0; // conta o total de preempcoes sofridas
-        proc.total_uso_cpu = 0;
-        proc.total_io = 0;
-        proc.total_tempo_ret = 0;
+    proc.total_preemp = 0; // conta o total de preempcoes sofridas
+    proc.total_uso_cpu = 0;
+    proc.total_io = 0;
+    proc.total_tempo_ret = 0;
 	proc.tingresso = total_tempo_cpu;
 	proc.proc_size = pega_tamanho();
 	return proc;
@@ -456,14 +480,9 @@ void cria_todos_processos(fila_t *f, int np) {
 }
 
 int main(int argc, char *argv[]){
-	if (argc != 2) {
-		printf("uso: %s <num_proc>\n", argv[0]);
-		return 0;
-	}
-	int np;
-	fila_t f;
-	np = atoi(argv[1]);
-	cria_fila(&f);
+    int np = 2
+	fila_memoria f;
+	cria_fila_memoria(&f);
 	cria_todos_processos(&f, np);
 	   /*
 	         Todos os np processos estao sendo criados no mesmo instante (tingresso = total_tempo_cpu = 0).
@@ -474,6 +493,6 @@ int main(int argc, char *argv[]){
 	      Nesse caso, um nova funcao cria_todos_processo() deve inserir os processos na fila
               com diferentes tempos de tingresso.
 	   */
-	escalonador(&f);
+
 	return 0;
 }
