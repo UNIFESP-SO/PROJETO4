@@ -118,18 +118,25 @@ int insere_fila_memo(fila_memoria *f, no_m *no){
 	no_m *atual;
 	atual = f->inicio;
 
-	while(atual->prox != NULL && atual->status == 'P' || (atual->status == 'H' && atual->tamanho < no->tamanho) ){
-        atual = atual->prox;
+	while(atual->prox != NULL ){
+            if(atual->status == 'P'){
+                atual = atual->prox;
+                continue;
+            }
+            else if(atual->tamanho < no->tamanho){
+                atual = atual->prox;
+            }
 	}
-    if(atual == f->fim && (atual->status == 'P' || atual->tamanho < no->tamanho)){
-        // MATAR PROCESSO
-        //retira_processo_aleatorio(f);
-        printf("\nFila cheia");
-//        insere_fila_memo(f, no);
-        return F;
-    }
     if(atual->status == 'H' && atual->tamanho >= no->tamanho){  // Se processo cabe nesse slot, insira
         // inserir no aqui
+        if(atual->tamanho == no->tamanho){
+                atual = no;
+                atual->ant->prox = no;
+                no->ant = atual->ant;
+                no->init = atual->init;
+
+                free(atual);
+        }
         no->prox = atual;
         no->ant = atual->ant;
         no->init = atual->init;
@@ -140,6 +147,13 @@ int insere_fila_memo(fila_memoria *f, no_m *no){
         f->count += 1;
 
         return V;
+    }
+    else{
+        // MATAR PROCESSO
+        //retira_processo_aleatorio(f);
+        //\nFila cheia
+        //        insere_fila_memo(f, no);
+        return F;
     }
     return F;
 }
@@ -153,7 +167,9 @@ void imprime_fila_memo(fila_memoria *f){
         return ;
     }
     while(atual != NULL){
-        printf("[ %c | init=%d | tam=%d ] --> ", atual->status, atual->init, atual->tamanho);
+        printf("[%c || init=%d || tam=%d] ", atual->status, atual->init, atual->tamanho);
+        if(atual->prox != NULL)
+            printf("-->\n");
         atual = atual->prox;
     }
 
