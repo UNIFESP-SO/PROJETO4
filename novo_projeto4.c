@@ -104,6 +104,7 @@ int fila_vazia(fila_memoria *f) {
 
 int insere_fila_memo(fila_memoria *f, no_m *no){
 	if (f->inicio == NULL) {    //fila vazia
+            no->init = 0;
             f->inicio = no;
             no_m *proximo;
             proximo = cria_no_memoria_vazio(no->tamanho, (f->tamanho - no->tamanho) );
@@ -120,7 +121,7 @@ int insere_fila_memo(fila_memoria *f, no_m *no){
 	while(atual->prox != NULL && atual->status == 'P' || (atual->status == 'H' && atual->tamanho < no->tamanho) ){
         atual = atual->prox;
 	}
-    if(atual == f->fim && atual->status == 'P' && atual != f->inicio){
+    if(atual == f->fim && (atual->status == 'P' || atual->tamanho < no->tamanho)){
         // MATAR PROCESSO
         //retira_processo_aleatorio(f);
         printf("\nFila cheia");
@@ -152,7 +153,7 @@ void imprime_fila_memo(fila_memoria *f){
         return ;
     }
     while(atual != NULL){
-        printf("[ %c | init-%d | tam-%d ] --> ", atual->status, atual->init, atual->tamanho);
+        printf("[ %c | init=%d | tam=%d ] --> ", atual->status, atual->init, atual->tamanho);
         atual = atual->prox;
     }
 
@@ -173,7 +174,7 @@ int pega_tempo (int x) {
 }
 
 int pega_tamanho(){
-	return(rand()%(PSIZE_MAX));
+	return((rand()%(PSIZE_MAX))+1);
 }
 
 // subtrai a-b, menor valor 0
@@ -237,7 +238,7 @@ void cria_todos_processos(fila_memoria *f, int np) {
 
 void main(){
     int i;
-    int np = 3;
+    int np = 20;
 	fila_memoria f;
 	cria_fila_memoria(&f);
 	cria_todos_processos(&f, np);
