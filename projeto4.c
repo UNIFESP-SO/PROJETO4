@@ -196,7 +196,9 @@ int insere_fila_memo(fila_memoria *f, no_m *no){
 
     if(atual == f->fim){
         // MATAR PROCESSO
+        printf("1\n");
         retira_processo_aleatorio(f);
+        printf("1\n");
         insere_fila_memo(f, no);
     }
     if(atual->status == 'H' && atual->tamanho >= no->tamanho){  // Se processo cabe nesse slot, insira
@@ -213,7 +215,12 @@ int insere_fila_memo(fila_memoria *f, no_m *no){
     }
 }
 
-int fila_vazia(fila_memoria *f) {
+int fila_vazia(fila_t *f) {
+	if (f->inicio == NULL) return V;
+	return F;
+}
+
+int fila_vazia_memo(fila_memoria *f) {
 	if (f->inicio == NULL) return V;
 	return F;
 }
@@ -395,7 +402,7 @@ void executa_processo(processo_t *proc) {
 	imprime_processo(*proc);
 }
 
-void escalonador(fila_memoria *f) {
+void escalonador(fila_t *f) {
 	processo_t proc;
 	while(!fila_vazia(f)) {
 		bzero(&proc, sizeof(processo_t));
@@ -479,11 +486,24 @@ void cria_todos_processos(fila_t *f, int np) {
 	}
 }
 
+void cria_todos_processos_m(fila_memoria *f, int np) {
+	int i;
+	processo_t proc;
+	for (i=0; i<np; i++) {
+		proc = cria_processo(i);
+		no_m *no = cria_no_memoria(proc);
+		insere_fila_memo(f, no);
+		printf("4\n");
+		sleep(10);
+	}
+}
+
 int main(int argc, char *argv[]){
-    int np = 2
+    int np = 2;
 	fila_memoria f;
 	cria_fila_memoria(&f);
-	cria_todos_processos(&f, np);
+	cria_todos_processos_m(&f, np);
+	imprime_fila_memo(&f);
 	   /*
 	         Todos os np processos estao sendo criados no mesmo instante (tingresso = total_tempo_cpu = 0).
 	      Portanto, a media do tempo de retorno sera sempre a soma de todos os ttotal_exec dos processos
