@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <time.h>
 
 #define F 0
 #define V 1
@@ -136,6 +137,8 @@ int insere_fila_memo(fila_memoria *f, no_m *no){
                 no->init = atual->init;
 
                 free(atual);
+                f->count += 1;
+                return V;
         }
         no->prox = atual;
         no->ant = atual->ant;
@@ -176,6 +179,87 @@ void imprime_fila_memo(fila_memoria *f){
 
 }
 
+int remove_no(no_m *no){
+    if(no->ant == NULL){
+        if(no->prox == NULL){
+            no = cria_no_memoria_vazio(no->init, no->tamanho);
+        }
+        else if(no->prox->status == 'P'){
+            no->status = 'H';
+        }
+        else if(no->prox->status == 'H'){
+            no->prox->tamanho += no->tamanho;
+            no->prox->ant = NULL;
+
+            free(no);
+        }
+    }
+    else if(no->prox == NULL){
+        if(no->ant == NULL){
+            no = cria_no_memoria_vazio(no->init, no->tamanho);
+        }
+        else if(no->ant->status == 'P')
+            no->status = 'H';
+        else if(no->ant->status == 'H'){
+            no->ant->tamanho += no->tamanho;
+            no->ant->prox = NULL;
+
+            free(no);
+        }
+    }
+    else{
+        if(no->prox->status == 'H'){
+            if(no->ant->status == 'H'){
+                no->ant->tamanho += no->tamanho + no->prox->tamanho;
+                no->ant->prox = no->prox->prox;
+                no->prox->prox->ant = no->ant;
+
+                free(no);
+                free(no->prox);
+            }
+            else if(no->ant->status == 'P'){
+                no->tamanho += no->prox->tamanho;
+                no->prox = no->prox->prox;
+                no->prox->prox->ant = no;
+                no->status = 'H';
+                free(no->prox);
+            }
+        }
+        else
+        if(no->ant->status == 'H'){
+            if(no->prox->status == 'P'){
+                no->ant->tamanho += no->tamanho;
+                no->ant->prox = no->prox;
+                no->prox->ant = no->ant;
+
+                free(no);
+            }
+        }
+        else{
+            no->status = 'H';
+        }
+    }
+}
+
+int retira_processo_aleatorio(fila_memoria *f, int p){
+//    int p = 1;
+//    do{
+//        p = (rand()% (f->count) + 1);
+//    }while(p > f->count);
+
+    int i = 1;
+    no_m *atual;
+    atual = f->inicio;
+    while(i < p ){
+        if(atual->prox->status == 'P'){
+            i++;
+            atual = atual->prox;
+        }
+        else
+            atual = atual->prox;
+    }
+    remove_no(atual);
+}
 // roleta ... para gerar um evento, dada uma probabilidade x.
 int prob(float x){
 	float p;
@@ -186,11 +270,13 @@ int prob(float x){
 
 // obtem tempo aleatorio <= x
 int pega_tempo (int x) {
+
 	return(rand()%(x+1));
 }
 
 int pega_tamanho(){
-	return((rand()%(PSIZE_MAX))+1);
+
+	return((rand()%(PSIZE_MAX-1))+1);
 }
 
 // subtrai a-b, menor valor 0
@@ -255,8 +341,15 @@ void cria_todos_processos(fila_memoria *f, int np) {
 void main(){
     int i;
     int np = 20;
+    srand(time(NULL));
 	fila_memoria f;
 	cria_fila_memoria(&f);
 	cria_todos_processos(&f, np);
+	imprime_fila_memo(&f);
+    printf("\n\n");
+	retira_processo_aleatorio(&f ,3);
+	retira_processo_aleatorio(&f ,4);
+	//retira_processo_aleatorio(&f ,4);
+
 	imprime_fila_memo(&f);
 }
