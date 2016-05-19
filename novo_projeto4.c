@@ -180,6 +180,7 @@ void imprime_fila_memo(fila_memoria *f){
 }
 
 int remove_no(no_m *no){
+    if(no == NULL) return F;
     if(no->ant == NULL){
         if(no->prox == NULL){
             no = cria_no_memoria_vazio(no->init, no->tamanho);
@@ -251,13 +252,10 @@ int retira_processo_aleatorio(fila_memoria *f, int p){
     no_m *atual;
     atual = f->inicio;
     while(i < p ){
-        if(atual->prox->status == 'P'){
-            i++;
-            atual = atual->prox;
-        }
-        else
-            atual = atual->prox;
+        atual = atual->prox;
+        i++;
     }
+    if(atual->status == 'H') return F;
     remove_no(atual);
 }
 // roleta ... para gerar um evento, dada uma probabilidade x.
@@ -346,10 +344,12 @@ void main(){
 	cria_fila_memoria(&f);
 	cria_todos_processos(&f, np);
 	imprime_fila_memo(&f);
-    printf("\n\n");
-	retira_processo_aleatorio(&f ,3);
-	retira_processo_aleatorio(&f ,4);
-	//retira_processo_aleatorio(&f ,4);
 
+    retira_processo_aleatorio(&f ,f.count );
+//	retira_processo_aleatorio(&f ,5);
+	//retira_processo_aleatorio(&f ,4);
+    sleep(5);
+    printf("\n");
+    system("clear");
 	imprime_fila_memo(&f);
 }
