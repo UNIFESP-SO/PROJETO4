@@ -106,12 +106,14 @@ int fila_vazia(fila_memoria *f) {
 int insere_fila_memo(fila_memoria *f, no_m *no){
 	if (f->inicio == NULL) {    //fila vazia
             no->init = 0;
+            no->ant = NULL;
             f->inicio = no;
             no_m *proximo;
             proximo = cria_no_memoria_vazio(no->tamanho, (f->tamanho - no->tamanho) );
             proximo->ant = no;
             no->prox = proximo;
             f->fim = proximo;
+            f->fim->prox = NULL;
             f->count++;
             return V;
 	}
@@ -119,7 +121,7 @@ int insere_fila_memo(fila_memoria *f, no_m *no){
 	no_m *atual;
 	atual = f->inicio;
 
-	while(atual->prox != NULL ){
+	while(atual != NULL ){
             if(atual->status == 'P'){
                 atual = atual->prox;
                 continue;
@@ -127,15 +129,18 @@ int insere_fila_memo(fila_memoria *f, no_m *no){
             else if(atual->tamanho < no->tamanho){
                 atual = atual->prox;
             }
+            else break;
 	}
+	if(atual == NULL) return F;
     if(atual->status == 'H' && atual->tamanho >= no->tamanho){  // Se processo cabe nesse slot, insira
         // inserir no aqui
         if(atual->tamanho == no->tamanho){
-                atual = no;
                 atual->ant->prox = no;
                 no->ant = atual->ant;
                 no->init = atual->init;
-
+                no->prox = atual->prox;
+                if(atual->prox != NULL) atual->prox->ant = no;
+                atual = no;
                 free(atual);
                 f->count += 1;
                 return V;
