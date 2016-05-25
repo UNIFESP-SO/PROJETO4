@@ -17,6 +17,9 @@
 #define PROB_PREEMP 0.3
 #define PSIZE_MAX 10
 #define TAM_MEMORIA 100
+#define FIRST_FIT   10
+#define NEXT_FIT    20
+#define BEST_FIT    30
 
 int imprime_header = F;  // usada apenas na funcao imprime_processo
 int total_tempo_cpu = 0; // marcador de tempo discreto, acumula tempos de execucao dos processos.
@@ -105,7 +108,7 @@ int fila_vazia(fila_memoria *f) {
 	return F;
 }
 
-int insere_fila_memo(fila_memoria *f, no_m *no){
+int insere_fila_memo(fila_memoria *f, no_m *no, int metodo){
     printf("\nInserindo proc %d de tamanho %d\n", no->proc.pid, no->tamanho);
 	if (f->inicio == NULL) {    //fila vazia
             no->init = 0;
@@ -124,16 +127,36 @@ int insere_fila_memo(fila_memoria *f, no_m *no){
 	no_m *atual;
 	atual = f->inicio;
 
-	while(atual != NULL ){
+    if(metodo == 10){
+            //FIRST FIT implementado
+        while(atual != NULL ){
             if(atual->status == 'P'){
                 atual = atual->prox;
                 continue;
             }
-            else if(atual->tamanho < no->tamanho){
+            else if(atual->tamanho <= no->tamanho){
                 atual = atual->prox;
             }
             else break;
-	}
+        }
+    }
+    if(metodo == 20){
+        //implementar NEXT FIT
+    }
+    if(metodo == 30){
+        //implementar BEST FIT
+        while(atual != NULL ){
+            if(atual->status == 'P'){
+                atual = atual->prox;
+                continue;
+            }
+            else if(atual->tamanho <= no->tamanho){
+                atual = atual->prox;
+            }
+            else break;
+        }
+    }
+
 	if(atual == NULL){
         imprime_fila_memo(f);
         printf("\nFila cheia1\n");
@@ -141,7 +164,7 @@ int insere_fila_memo(fila_memoria *f, no_m *no){
         // MATAR PROCESSO
         retira_processo_aleatorio(f);
         //\nFila cheia
-        insere_fila_memo(f, no);
+        insere_fila_memo(f, no, metodo);
         return F;
     }
     if(atual->status == 'H' && atual->tamanho >= no->tamanho){  // Se processo cabe nesse slot, insira
@@ -173,7 +196,7 @@ int insere_fila_memo(fila_memoria *f, no_m *no){
         // MATAR PROCESSO
         retira_processo_aleatorio(f);
         //\nFila cheia
-        insere_fila_memo(f, no);
+        insere_fila_memo(f, no, metodo);
         return F;
     }
     return F;
@@ -347,14 +370,14 @@ processo_t cria_processo(unsigned short pid){
 	return proc;
 }
 
-void cria_todos_processos(fila_memoria *f, int np) {
+void cria_todos_processos(fila_memoria *f, int np, int metodo) {
 	int i;
 	processo_t proc;
 	no_m *no;
 	for (i=0; i<np; i++) {
 		proc = cria_processo(i);
 		no = cria_no_memoria(proc);
-		insere_fila_memo(f, no);
+		insere_fila_memo(f, no, metodo);
 	}
 }
 
@@ -365,7 +388,7 @@ void main(){
     srand(time(NULL));
 	fila_memoria f;
 	cria_fila_memoria(&f);
-	cria_todos_processos(&f, np);
+	cria_todos_processos(&f, np, FIRST_FIT);
 	imprime_fila_memo(&f);
     printf("\n\n");
 }
