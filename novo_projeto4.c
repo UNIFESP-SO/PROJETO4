@@ -109,7 +109,23 @@ int fila_vazia(fila_memoria *f) {
 }
 
 int insere_fila_memo(fila_memoria *f, no_m *no, int metodo){
-    printf("\nInserindo proc %d de tamanho %d\n", no->proc.pid, no->tamanho);
+    char *met;
+    met = calloc(15, sizeof(char));
+    char fi[15] = "FIRST FIT";
+    char best[15] = "BEST FIT";
+    char next[15] = "NEXT FIT";
+    switch(metodo){
+        case 10:
+            met = fi;
+            break;
+        case 20:
+            met = next;
+            break;
+        case 30:
+            met = best;
+            break;
+    }
+    printf("\nInserindo proc %d de tamanho %d pelo metodo %s", no->proc.pid, no->tamanho, met);
 	if (f->inicio == NULL) {    //fila vazia
             no->init = 0;
             no->ant = NULL;
@@ -121,6 +137,9 @@ int insere_fila_memo(fila_memoria *f, no_m *no, int metodo){
             f->fim = proximo;
             f->fim->prox = NULL;
             f->count++;
+
+            printf("\n");
+            imprime_fila_memo(f);
             return V;
 	}
 
@@ -134,49 +153,61 @@ int insere_fila_memo(fila_memoria *f, no_m *no, int metodo){
                 atual = atual->prox;
                 continue;
             }
-            else if(atual->tamanho <= no->tamanho){
+            else if(atual->tamanho < no->tamanho){
                 atual = atual->prox;
             }
             else break;
         }
     }
-    if(metodo == 20){
+    else if(metodo == 20){
         //implementar NEXT FIT
     }
-    if(metodo == 30){
+    else if(metodo == 30){
+        int sobra, sobra_ant = 10000000;
+        no_m *aux = NULL;
         //implementar BEST FIT
         while(atual != NULL ){
             if(atual->status == 'P'){
                 atual = atual->prox;
                 continue;
             }
-            else if(atual->tamanho <= no->tamanho){
+            else if(atual->tamanho < no->tamanho){
                 atual = atual->prox;
             }
-            else break;
+            else {
+                sobra = atual->tamanho - no->tamanho;
+                if(sobra < sobra_ant){
+                        aux = atual;
+                        sobra_ant = sobra;
+                }
+                atual = atual->prox;
+            }
+        }
+        if(aux != NULL){
+            atual = aux;
+            sobra_ant = 100000;
         }
     }
 
 	if(atual == NULL){
-        imprime_fila_memo(f);
-        printf("\nFila cheia1\n");
-        //sleep(2);
         // MATAR PROCESSO
         retira_processo_aleatorio(f);
-        //\nFila cheia
         insere_fila_memo(f, no, metodo);
         return F;
     }
     if(atual->status == 'H' && atual->tamanho >= no->tamanho){  // Se processo cabe nesse slot, insira
         // inserir no aqui
         if(atual->tamanho == no->tamanho){
-                atual->ant->prox = no;
+                if(atual->ant != NULL) atual->ant->prox = no;
                 no->ant = atual->ant;
                 no->init = atual->init;
                 no->prox = atual->prox;
                 if(atual->prox != NULL) atual->prox->ant = no;
                 atual = no;
                 f->count += 1;
+
+                printf("\n");
+                imprime_fila_memo(f);
                 return V;
         }
         no->prox = atual;
@@ -188,14 +219,13 @@ int insere_fila_memo(fila_memoria *f, no_m *no, int metodo){
         atual->ant = no;
         f->count += 1;
 
+        printf("\n");
+        imprime_fila_memo(f);
         return V;
     }
     else{
-        printf("Fila cheia2\n");
-        //sleep(2);
         // MATAR PROCESSO
         retira_processo_aleatorio(f);
-        //\nFila cheia
         insere_fila_memo(f, no, metodo);
         return F;
     }
@@ -206,6 +236,7 @@ void imprime_fila_memo(fila_memoria *f){
     int no_id = 0;
     no_m *atual;
     atual = f->inicio;
+    printf("\n\n");
     if(atual == NULL){
         printf("Fila Vazia\n");
         return ;
@@ -223,18 +254,19 @@ void imprime_fila_memo(fila_memoria *f){
 int remove_no(no_m *no){
     if(no == NULL) return F;
     if(no->ant == NULL){
-        if(no->prox == NULL){
-            no = cria_no_memoria_vazio(no->init, no->tamanho);
-        }
-        else if(no->prox->status == 'P'){
+//        if(no->prox == NULL){
+//            no = cria_no_memoria_vazio(no->init, no->tamanho);
+//        }
+        if(no->prox->status == 'P'){
             no->status = 'H';
         }
         else if(no->prox->status == 'H'){
-            no->prox->tamanho += no->tamanho;
-            no->prox->init = no->init;
-            no->prox->ant = NULL;
+            no->tamanho += no->prox->tamanho;
+            no->prox = no->prox->prox;
+            if(no->prox->prox != NULL) no->prox->prox->ant = no;
+            no->status = 'H';
 
-            free(no);
+            free(no->prox);
         }
     }
     else if(no->prox == NULL){
@@ -289,20 +321,27 @@ int remove_no(no_m *no){
 
 int retira_processo_aleatorio(fila_memoria *f){
     int p;
-    do{
-        p = (rand()%(f->count) + 1);
-    }while(p > f->count);
-    printf("\nvai remover o %d\n", p);
+    int j;
     int i = 1;
     no_m *atual;
-    atual = f->inicio;
-    while(i < p && atual != NULL ){
-        atual = atual->prox;
-        i++;
+    while(1){
+        j = (rand()%100) + 1;
+        do{
+            p = (rand()%(f->count) + 1);
+        }while(p > f->count);
+        atual = f->inicio;
+        while(i < p && atual != NULL ){
+            atual = atual->prox;
+            i++;
+        }
+        if(atual->status == 'H' || i < p) return F;
+        printf("\nProcesso %d sendo encerrado", atual->proc.pid);
+        if(remove_no(atual) == V) f->count -= 1;
+
+        printf("\n");
+        imprime_fila_memo(f);
+        if(j < 20) break;
     }
-    if(atual->status == 'H' || i < p) return F;
-    printf("Matando o Processo %d\n", atual->proc.pid);
-    if(remove_no(atual) == V) f->count -= 1;
 }
 // roleta ... para gerar um evento, dada uma probabilidade x.
 int prob(float x){
@@ -314,6 +353,7 @@ int prob(float x){
 
 // obtem tempo aleatorio <= x
 int pega_tempo (int x) {
+
 
 	return(rand()%(x+1));
 }
@@ -388,7 +428,7 @@ void main(){
     srand(time(NULL));
 	fila_memoria f;
 	cria_fila_memoria(&f);
-	cria_todos_processos(&f, np, FIRST_FIT);
+	cria_todos_processos(&f, np, BEST_FIT);
 	imprime_fila_memo(&f);
     printf("\n\n");
 }
