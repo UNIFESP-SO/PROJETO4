@@ -1,3 +1,11 @@
+/* MARK NAME Fernando Soares RA: 86281*/
+/* MARK NAME Bruno Ferreira  RA: 104790*/
+
+/* Levando em consideração que o código é somente para fins de simulação
+    os diferentes métodos foram implementando usando a mesma função de inserção na lista de memoria,
+    sendo diferenciada entao, apenas pela busca por onde será inserido o nó
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -58,6 +66,7 @@ typedef struct no no_m;
 struct fila_memoria{
 	no_m *inicio;
 	no_m *fim;
+	no_m *next_free;
 	int tamanho;
 	int count;
 };
@@ -99,6 +108,7 @@ no_m *cria_no_memoria_vazio(int init, int tamanho) {
 int cria_fila_memoria(fila_memoria *f) {
 	f->inicio = NULL;
 	f->fim = NULL;
+	f->next_free = NULL;
 	f->count = 0;
 	f->tamanho = TAM_MEMORIA;
 }
@@ -137,6 +147,7 @@ int insere_fila_memo(fila_memoria *f, no_m *no, int metodo){
             f->fim = proximo;
             f->fim->prox = NULL;
             f->count++;
+            f->next_free = proximo;         // PROXIMO SLOT VAZIO
 
             printf("\n");
             imprime_fila_memo(f);
@@ -144,7 +155,7 @@ int insere_fila_memo(fila_memoria *f, no_m *no, int metodo){
 	}
 
 	no_m *atual;
-	atual = f->inicio;
+	atual = (metodo == 10 || metodo == 30) ? f->inicio: f->next_free;
 
     if(metodo == 10){
             //FIRST FIT implementado
@@ -161,6 +172,19 @@ int insere_fila_memo(fila_memoria *f, no_m *no, int metodo){
     }
     else if(metodo == 20){
         //implementar NEXT FIT
+        int flag_NF = 0;
+        int flag_NF2 = 0;
+        while(atual != NULL ){
+            if(atual->status == 'P'){
+                atual = atual->prox;
+                continue;
+            }
+            else if(atual->tamanho < no->tamanho){
+                if(atual->tamanho > 7) f->next_free = atual;
+                atual = atual->prox;
+            }
+            else break;
+        }
     }
     else if(metodo == 30){
         int sobra, sobra_ant = 10000000;
@@ -192,20 +216,22 @@ int insere_fila_memo(fila_memoria *f, no_m *no, int metodo){
 	if(atual == NULL){
         // MATAR PROCESSO
         retira_processo_aleatorio(f);
-        insere_fila_memo(f, no, metodo);
-        return F;
+        return insere_fila_memo(f, no, metodo);
     }
-    if(atual->status == 'H' && atual->tamanho >= no->tamanho){  // Se processo cabe nesse slot, insira
+   else if(atual->status == 'H' && atual->tamanho >= no->tamanho){  // Se processo cabe nesse slot, insira
         // inserir no aqui
         if(atual->tamanho == no->tamanho){
                 if(atual->ant != NULL) atual->ant->prox = no;
+                if(atual->ant == NULL) f->inicio = no;
                 no->ant = atual->ant;
                 no->init = atual->init;
                 no->prox = atual->prox;
                 if(atual->prox != NULL) atual->prox->ant = no;
-                atual = no;
                 f->count += 1;
 
+                //SOMENTE PARA O METODO NEXT FIT:
+                if(atual == f->next_free) f->next_free = f->inicio;
+                free(atual);
                 printf("\n");
                 imprime_fila_memo(f);
                 return V;
@@ -216,8 +242,12 @@ int insere_fila_memo(fila_memoria *f, no_m *no, int metodo){
         atual->init += no->tamanho;
         atual->tamanho -= no->tamanho;
         if(atual->ant != NULL) atual->ant->prox = no;
+        if(atual->ant == NULL) f->inicio = no;
         atual->ant = no;
         f->count += 1;
+
+        //SOMENTE PARA O METODO NEXT FIT:
+
 
         printf("\n");
         imprime_fila_memo(f);
@@ -226,8 +256,7 @@ int insere_fila_memo(fila_memoria *f, no_m *no, int metodo){
     else{
         // MATAR PROCESSO
         retira_processo_aleatorio(f);
-        insere_fila_memo(f, no, metodo);
-        return F;
+        return insere_fila_memo(f, no, metodo);
     }
     return F;
 }
@@ -242,31 +271,35 @@ void imprime_fila_memo(fila_memoria *f){
         return ;
     }
     while(atual != NULL){
-        printf("[%c->%d || init=%d || tam=%d] ", atual->status,atual->proc.pid, atual->init, atual->tamanho);
+        if(atual->status == 'P')
+            printf("[ %c->%d || init=%d || tam=%d] ", atual->status,atual->proc.pid, atual->init, atual->tamanho);
+        if(atual->status == 'H')
+            printf("[   %c   || init=%d || tam=%d] ", atual->status, atual->init, atual->tamanho);
         if(atual->prox != NULL)
             printf("-->\n");
         atual = atual->prox;
     }
-
+    printf("\n");
 
 }
 
-int remove_no(no_m *no){
+int remove_no(fila_memoria *f, no_m *no){
+    no_m *aux;
     if(no == NULL) return F;
     if(no->ant == NULL){
-//        if(no->prox == NULL){
-//            no = cria_no_memoria_vazio(no->init, no->tamanho);
-//        }
         if(no->prox->status == 'P'){
             no->status = 'H';
         }
         else if(no->prox->status == 'H'){
             no->tamanho += no->prox->tamanho;
-            no->prox = no->prox->prox;
+            aux = no->prox;
             if(no->prox->prox != NULL) no->prox->prox->ant = no;
+            no->prox = no->prox->prox;
             no->status = 'H';
 
-            free(no->prox);
+            //PARA USO DO METODO NEXT FIT
+            if(aux == f->next_free) f->next_free = f->inicio;
+            free(aux);
         }
     }
     else if(no->prox == NULL){
@@ -279,38 +312,47 @@ int remove_no(no_m *no){
             no->ant->tamanho += no->tamanho;
             no->ant->prox = NULL;
 
+            //PARA USO DO METODO NEXT FIT
+            if(no->ant == f->next_free) f->next_free = f->inicio;
             free(no);
         }
     }
     else{
         if(no->prox->status == 'H'){
             if(no->ant->status == 'H'){
-                no->ant->tamanho += no->tamanho + no->prox->tamanho;
+                no->ant->tamanho = no->ant->tamanho + no->tamanho + no->prox->tamanho;
                 no->ant->prox = no->prox->prox;
                 if(no->prox->prox != NULL) no->prox->prox->ant = no->ant;
 
-                free(no);
+                //PARA USO DO METODO NEXT FIT
+                f->next_free = f->inicio;
+
                 free(no->prox);
+                free(no);
             }
             else if(no->ant->status == 'P'){
-                no_m *aux;
                 no->tamanho += no->prox->tamanho;
                 aux = no->prox;
+                if(no->prox->prox != NULL) no->prox->prox->ant = no;
                 no->prox = no->prox->prox;
-                if(no->prox != NULL) no->prox->prox->ant = no;
                 no->status = 'H';
+
+                //PARA USO DO METODO NEXT FIT
+                if(aux == f->next_free) f->next_free = no;
                 free(aux);
             }
         }
         else
         if(no->ant->status == 'H'){
-            if(no->prox->status == 'P'){
+            //if(no->prox->status == 'P'){
                 no->ant->tamanho += no->tamanho;
                 no->ant->prox = no->prox;
                 no->prox->ant = no->ant;
 
+                //PARA USO DO METODO NEXT FIT
+                if(no == f->next_free) f->next_free = f->inicio;
                 free(no);
-            }
+            //}
         }
         else{
             no->status = 'H';
@@ -330,13 +372,15 @@ int retira_processo_aleatorio(fila_memoria *f){
             p = (rand()%(f->count) + 1);
         }while(p > f->count);
         atual = f->inicio;
-        while(i < p && atual != NULL ){
+        while(i <= p && atual != NULL ){
             atual = atual->prox;
             i++;
         }
         if(atual->status == 'H' || i < p) return F;
         printf("\nProcesso %d sendo encerrado", atual->proc.pid);
-        if(remove_no(atual) == V) f->count -= 1;
+
+        if(atual == f->next_free) f->next_free = f->inicio;
+        if(remove_no(f, atual) == V) f->count -= 1;
 
         printf("\n");
         imprime_fila_memo(f);
@@ -428,7 +472,9 @@ void main(){
     srand(time(NULL));
 	fila_memoria f;
 	cria_fila_memoria(&f);
+	cria_todos_processos(&f, np, NEXT_FIT);
 	cria_todos_processos(&f, np, BEST_FIT);
+	cria_todos_processos(&f, np, FIRST_FIT);
 	imprime_fila_memo(&f);
     printf("\n\n");
 }
